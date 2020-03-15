@@ -1,7 +1,11 @@
 // dmf version 3.12.20+ 
-
 //
-// TO ADD:  RESPOND TO CHANGE IN CHARACTERISTIC VALUE BY CHANGING LED PERIOD
+// 3.15.20 OK, the pair of devices now communicate with each other. 
+// This one (test_ESP32_a) is the BLE SERVER
+// It has a blinking LED on GPIO 12, a reporter LED on GPIO 25, and a button in GPIO 27
+// It NOTIFIES the BLE client when the button is pushed, and the CLIENT reporter LED toggles. 
+// The client writes a change to the value of the Characteristic when its button is pusshed, 
+// and the SERVER blinky stops blinking. 
 //
 
 // Need to include "arduino.h" here
@@ -36,6 +40,7 @@
 
 boolean ledState = LOW; 
 boolean indicatorState = LOW; 
+boolean ledRemoteON = HIGH; 
 
 // ------- timers --------
 
@@ -84,23 +89,16 @@ class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
 
 		characteristicValue = pCharacteristic->getValue();
 		
-    if (characteristicValue == "0") {
-			Serial.println("Server has received a turn-off write");
+    if (characteristicValue == "OFF") {
+			
+      Serial.println("Server has received a turn-off write");
+      ledRemoteON = LOW;
 
-			count = 0;
-			ledState = LOW;
-
-			Serial.println("And so it is turning own LED off");
-		} else if (characteristicValue == "1") {
-			Serial.println("Server has received a turn-on write");
-			ledState = HIGH;
-			Serial.println("And so it is turning own LED on");
-		} else if (characteristicValue == "2") {
-			Serial.println("Server has received a blink slow write");
-			count = 0;
-		} else if (characteristicValue == "3") {
-			Serial.println("Server has received a blink quick write");
-			count = 0;
+		} else if (characteristicValue == "ON") {
+			
+      Serial.println("Server has received a turn-on write");
+			ledRemoteON = HIGH;
+	
 		}
 	}
 };    // note use of semicolon here
@@ -186,7 +184,7 @@ void setup() {
 
 void loop() {
 
-  if (elapsedTime > interval) {
+  if ((elapsedTime > interval) && (ledRemoteON)) {
     Serial.println("Toggling state 1"); 
     if (deviceConnected){
       pCharacteristic->setValue("Toggling state 1");
@@ -196,6 +194,8 @@ void loop() {
     ledState = !ledState; 
     digitalWrite(LEDBLINK, ledState);
     elapsedTime = 0; 
+  } else if (!ledRemoteON){
+    digitalWrite(LEDBLINK, LOW); 
   }
 
   if (switchedOn != indicatorState) {

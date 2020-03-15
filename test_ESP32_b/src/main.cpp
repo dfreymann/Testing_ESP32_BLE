@@ -1,7 +1,13 @@
 // dmf version 3.12.20+ 
+//
+// 3.15.20 OK, the pair of devices now communicate with each other. 
+// This one (test_ESP32_b) is the BLE CLIENT
+// It has a reporter LED on GPIO 25, and a button in GPIO 27
+// It writes a change to the value of the Service Characteristic when the button is pushed, 
+// and the SERVER blinky stops blinking. 
+// The server NOTIFIES the client when its button is pushed, and the CLIENT reporter LED toggles. 
+//
 
-// TO REVISE - HANDLE NOTIFY->BLINK LED WITH CLEANER CODE
-// TO REVISE - ADD TIMER FOR USE OF WRITEVALUE TO CHANGE PERIOD OF SERVER BLINK 
 
 /**
  * A BLE client example that is rich in capabilities.
@@ -33,6 +39,8 @@ static BLEAdvertisedDevice* myDevice;
 
 static boolean toggleLocalLED = false; 
 boolean indicatorState = LOW; 
+boolean toggleRemoteLED = false; 
+String newValue = "OFF";
 
 // ------------- callback functions ---------------
 
@@ -63,7 +71,6 @@ static void notifyCallback(
     if (length == 18) {   // just capturing the indicator LED 2 message for now
       toggleLocalLED = !toggleLocalLED; 
     }
-
 }
 
 // ----------- [ to explain ] -----------
@@ -230,12 +237,26 @@ void loop() {
       toggleLocalLED = !toggleLocalLED; 
     }
 
-    // write a new value for the Characteristic (client->server)
-    String newValue = "Time since boot: " + String(millis()/1000);
-    Serial.println("Setting new characteristic value to \"" + newValue + "\"");
-    // Set the characteristic's value to be the array of bytes that is actually 
-    // a string.
-    pRemoteCharacteristic->writeValue(newValue.c_str(), newValue.length());
+    if (switchedOn) { // if button push, toggle the value of the Characteristic
+
+      toggleRemoteLED = !toggleRemoteLED;
+
+      // write a new value for the Characteristic (client->server)
+      if (toggleRemoteLED) {
+        newValue = "ON";
+      } else {
+        newValue = "OFF";
+      }
+  
+      Serial.println("Setting new characteristic value to \"" + newValue + "\"");
+      // Set the characteristic's value to be the array of bytes that is actually 
+      // a string.
+      pRemoteCharacteristic->writeValue(newValue.c_str(), newValue.length());
+
+      switchedOn = !switchedOn;
+
+    }
+  
 
   }else if(doScan){
     
