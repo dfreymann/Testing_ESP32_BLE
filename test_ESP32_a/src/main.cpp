@@ -184,6 +184,7 @@ void setup() {
 
 void loop() {
 
+/*
   if ((elapsedTime > interval) && (ledRemoteON)) {
     Serial.println("Toggling state 1"); 
     if (deviceConnected){
@@ -197,6 +198,7 @@ void loop() {
   } else if (!ledRemoteON){
     digitalWrite(LEDBLINK, LOW); 
   }
+*/ 
 
   if (switchedOn != indicatorState) {
     Serial.println("Switch toggling 2");
